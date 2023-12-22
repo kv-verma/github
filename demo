@@ -1,0 +1,108 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+namespace delegates
+{
+    public partial class Form1 : Form
+    {
+        private delegate void UpdateUIDelegate(string message);
+
+        private event EventHandler<string> EventOccurred;
+
+        private bool isRunning = false;
+        private Thread eventThread;
+        public Form1()
+        {
+            InitializeComponent();
+            InitializeEventHandlers();
+
+        }
+        private void InitializeEventHandlers()
+        {
+            EventOccurred += OnEventOccurred;
+        }
+
+        private void OnEventOccurred(object sender, string message)
+        {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new UpdateUIDelegate(UpdateUI), message);
+            }
+            else
+            {
+                UpdateUI(message);
+            }
+        }
+
+        private void UpdateUI(string message)
+        {
+            listBoxEvents.Items.Insert(0, $"{DateTime.Now}: {message}");
+        }
+
+        private void SimulateEvents()
+        {
+            Random random = new Random();
+
+            while (isRunning)
+            {
+                int eventType = random.Next(3);
+
+                switch (eventType)
+                {
+                    case 0:
+                        EventOccurred?.Invoke(this, "Standby event");
+                        break;
+
+                    case 1:
+                        EventOccurred?.Invoke(this, "Scheduled time event");
+                        break;
+
+                    case 2:
+                        EventOccurred?.Invoke(this, "Non-scheduled time event");
+                        break;
+                }
+
+                Thread.Sleep(10000); // Simulate some delay between events
+            }
+        }
+
+        private void btnStart_Click(object sender, EventArgs e)
+        {
+            if (!isRunning)
+            {
+                isRunning = true;
+                eventThread = new Thread(SimulateEvents);
+                eventThread.Start();
+                btnStart.Enabled = false;
+                btnStop.Enabled = true;
+            }
+
+    }
+
+    private void btnStop_Click(object sender, EventArgs e)
+        {
+            if (isRunning)
+            {
+                isRunning = false;
+                eventThread.Join(); // Wait for the thread to finish
+                btnStart.Enabled = true;
+                btnStop.Enabled = false;
+            }
+        }
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (isRunning)
+            {
+                isRunning = false;
+                eventThread.Join(); // Wait for the thread to finish
+            }
+        }
+    }
+}
